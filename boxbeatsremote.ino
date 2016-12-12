@@ -50,7 +50,7 @@ void configureSensor(void)
 
 void setup(void)
 {
-//   Serial.begin(9600);
+  /*Serial.begin(11520);*/
   server.begin();
 
   Serial.print("LocalIP: "); Serial.println(WiFi.localIP());
@@ -82,6 +82,7 @@ void loop(void)
       delay(50);
   } else if(nextButtonState == HIGH) {
       Particle.publish("NEXT_MODE");
+      Serial.println("NEXT_MODE");
       lastNextButtonState = HIGH;
   } else {
       lastNextButtonState = LOW;
@@ -91,19 +92,22 @@ void loop(void)
       delay(50);
   } else if(previousButtonState == HIGH) {
       Particle.publish("PREVIOUS_MODE");
+      Serial.println("PREVIOUS_MODE");
       lastPreviousButtonState = HIGH;
   } else {
       lastPreviousButtonState = LOW;
   }
 
   if (client.connected()) {
-    if(client.available()) {
-        int acceleration = (int) ((accel.acceleration.z * 100) + 120);
-        server.print(acceleration);
-    }
-    client.flush();
+    delay(250);
+    int acceleration = (int) ((accel.acceleration.z * 100) + 120);
+    uint8_t accelBytes[2];
+    accelBytes[0] = acceleration >> 8;
+    accelBytes[1] = acceleration & 0xFF;
+    server.write(accelBytes, 2);
+    /*Serial.printlnf("Client sending: %d", acceleration);*/
   } else {
+    /*Serial.println("Getting that client connection");*/
     client = server.available();
   }
-
 }
