@@ -14,8 +14,9 @@
 
 Adafruit_LSM9DS0 lsm = Adafruit_LSM9DS0(1000);  // Use I2C, ID #1000
 
-TCPServer server = TCPServer(54555);
-TCPClient client;
+UDP udpMulticast;
+int port = 47555;
+IPAddress remoteIP(239,1,1,232);
 
 int nextButtonState = 0;
 int lastNextButtonState = 0;
@@ -51,7 +52,7 @@ void configureSensor(void)
 void setup(void)
 {
   /*Serial.begin(11520);*/
-  server.begin();
+  udpMulticast.begin(0);
 
   Serial.print("LocalIP: "); Serial.println(WiFi.localIP());
   Serial.print("Subment Mask: "); Serial.println(WiFi.subnetMask());
@@ -98,16 +99,13 @@ void loop(void)
       lastPreviousButtonState = LOW;
   }
 
-  if (client.connected()) {
-    delay(250);
-    int acceleration = (int) ((accel.acceleration.z * 100) + 120);
-    uint8_t accelBytes[2];
-    accelBytes[0] = acceleration >> 8;
-    accelBytes[1] = acceleration & 0xFF;
-    server.write(accelBytes, 2);
-    /*Serial.printlnf("Client sending: %d", acceleration);*/
-  } else {
-    /*Serial.println("Getting that client connection");*/
-    client = server.available();
+  delay(5);
+  int acceleration = (int) ((accel.acceleration.z * 100) + 120);
+  uint8_t accelBytes[2];
+  accelBytes[0] = acceleration >> 8;
+  accelBytes[1] = acceleration & 0xFF;
+
+  if(udpMulticast.sendPacket(accelBytes, 2, remoteIP, port) < 0) {
+    udpMulticast.begin(0);
   }
 }
