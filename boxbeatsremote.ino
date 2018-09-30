@@ -4,6 +4,7 @@
 
 #define NEXT_BUTTON D2
 #define PREVIOUS_BUTTON D4
+#define MODE_BUTTON D5
 
 Adafruit_LSM9DS0 lsm = Adafruit_LSM9DS0(1000);  // Use I2C, ID #1000
 sensors_event_t accel, mag, gyro, temp;
@@ -11,6 +12,9 @@ sensors_event_t accel, mag, gyro, temp;
 UDP udpMulticast;
 int port = 47555;
 IPAddress remoteIP(239,1,1,232);
+
+int modeButtonState = 0;
+int lastModeButtonState = 0;
 
 int nextButtonState = 0;
 int lastNextButtonState = 0;
@@ -20,6 +24,7 @@ int lastPreviousButtonState = 0;
 void configureButtonPins(void) {
     pinMode(NEXT_BUTTON, INPUT);
     pinMode(PREVIOUS_BUTTON, INPUT);
+    pinMode(MODE_BUTTON, INPUT);
 }
 
 void configureSensor(void)
@@ -42,7 +47,7 @@ void configureSensor(void)
 
 void setup(void)
 {
-  Serial.begin(11520);
+  // Serial.begin(11520);
   udpMulticast.begin(0);
 
   Serial.print("LocalIP: "); Serial.println(WiFi.localIP());
@@ -63,16 +68,18 @@ void setup(void)
 
 void loop(void)
 {
-  lsm.getEvent(&accel, &mag, &gyro, &temp);
-  checkForModeButtonPresses();
+  // lsm.getEvent(&accel, &mag, &gyro, &temp);
+  checkForButtonPress();
   delay(5);
   sendAccelerationData();
 }
 
-void checkForModeButtonPresses() {
+void checkForButtonPress() {
   nextButtonState = digitalRead(NEXT_BUTTON);
   previousButtonState = digitalRead(PREVIOUS_BUTTON);
+  modeButtonState = digitalRead(MODE_BUTTON);
 
+  //Do a debounce so the button isn't "pressed" multiple times in a row
   if(nextButtonState == HIGH && lastNextButtonState == HIGH) {
       delay(50);
   } else if(nextButtonState == HIGH) {
@@ -89,6 +96,15 @@ void checkForModeButtonPresses() {
       lastPreviousButtonState = HIGH;
   } else {
       lastPreviousButtonState = LOW;
+  }
+
+  if(modeButtonState == HIGH && lastModeButtonState == HIGH) {
+      delay(50);
+  } else if(modeButtonState == HIGH) {
+      Particle.publish("RESET");
+      lastModeButtonState = HIGH;
+  } else {
+      lastModeButtonState = LOW;
   }
 }
 
